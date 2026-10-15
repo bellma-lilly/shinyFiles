@@ -497,3 +497,44 @@
   padding-top: 8px;
   left: 149px
 }
+
+/*
+  Loading overlay
+  Sits over the current listing rather than replacing it, so a slow directory
+  does not blank the dialog and cost the user their place.
+*/
+.sF-modal .modal-body {
+  position: relative;
+}
+.sF-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: #555;
+  font-size: 13px;
+}
+.sF-loading>div:last-child {
+  margin-top: 10px;
+}
+.sF-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #d7dce5;
+  border-top-color: #337ab7;
+  border-radius: 50%;
+  animation: sF-spin 0.7s linear infinite;
+}
+@keyframes sF-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sF-spinner { animation-duration: 2.4s; }
+}

@@ -261,3 +261,125 @@ test_that("a file path outside every root does not navigate", {
   typeIntoPathBox(app, fs::path(base, "data"))
   expect_false(warningShown(app))
 })
+
+# --- loading overlay -------------------------------------------------------
+#
+# Listings on a networked mount can take seconds. These use a roots *function*
+# that sleeps, which is the documented extension point and needs no library
+# change to stall.
+
+slowAppDir <- local({
+  dir <- fs::path(tempfile("sf-slow"))
+  fs::dir_create(fs::path(dir, "data", "documents"))
+  fs::dir_create(fs::path(dir, "other", "elsewhere"))
+  fs::file_create(fs::path(dir, "data", "readme.txt"))
+  writeLines(
+    c(
+      'library(shiny)',
+      'library(shinyFiles)',
+      'base <- Sys.getenv("SF_SLOW_BASE")',
+      '# Long enough to outlast the client-side overlay delay with margin.',
+      '# Two roots so a volume switch issues a real client request -- the',
+      '# initial listing is pushed by the server on open, not requested.',
+      'slowRoots <- function() {',
+      '  Sys.sleep(1)',
+      '  c(data = file.path(base, "data"), other = file.path(base, "other"))',
+      '}',
+      'ui <- fluidPage(',
+      '  shinyDirButton("dir", "Pick dir", "Pick a directory"),',
+      '  verbatimTextOutput("dirpath")',
+      ')',
+      'server <- function(input, output, session) {',
+      '  shinyDirChoose(input, "dir", roots = slowRoots)',
+      '  output$dirpath <- renderText({',
+      '    req(input$dir)',
+      '    as.character(parseDirPath(slowRoots(), input$dir))',
+      '  })',
+      '}',
+      'shinyApp(ui, server)'
+    ),
+    fs::path(dir, "app.R")
+  )
+  as.character(fs::path_real(dir))
+})
+
+withr::local_envvar(
+  c(SF_SLOW_BASE = slowAppDir),
+  .local_envir = teardown_env()
+)
+
+overlayShown <- function(app) {
+  app$get_js("$('.sF-modalContainer:visible').last().find('.sF-loading').length > 0")
+}
+
+switchVolume <- function(app, volume) {
+  app$run_js(sprintf("(function(){
+    var m = $('.sF-modalContainer:visible').last();
+    var sel = m.find('.sF-breadcrumps');
+    sel.val(%s); sel.trigger('change');
+    return 1;
+  })()", jsonlite::toJSON(volume, auto_unbox = TRUE)))
+}
+
+test_that("a slow listing raises the loading overlay, then clears it", {
+  skipUnlessBrowser()
+  app <- AppDriver$new(slowAppDir, name = "slow-overlay", load_timeout = 30000)
+  on.exit(app$stop(), add = TRUE)
+
+  openChooser(app, "dir")
+  # The initial listing is pushed by the server when the dialog opens, so it is
+  # not a client request and raises no overlay. A volume switch is.
+  switchVolume(app, "other")
+  # Deliberately not wait_for_idle(): the overlay only exists mid-request.
+  Sys.sleep(0.5)
+  expect_true(overlayShown(app))
+  expect_true(app$get_js("$('.sF-modalContainer:visible').last().find('.sF-spinner').length > 0"))
+
+  app$wait_for_idle()
+  expect_false(overlayShown(app))
+})
+
+test_that("the overlay leaves the listing underneath visible", {
+  skipUnlessBrowser()
+  app <- AppDriver$new(slowAppDir, name = "slow-overlay-keeps", load_timeout = 30000)
+  on.exit(app$stop(), add = TRUE)
+
+  openChooser(app, "dir")
+  switchVolume(app, "other")
+  Sys.sleep(0.5)
+
+  expect_true(overlayShown(app))
+  # Overlaying rather than replacing is the whole point: the user keeps place.
+  expect_true(app$get_js("$('.sF-modalContainer:visible').last().find('.sF-dirList .sF-file-name').length > 0"))
+})
+
+test_that("a fast listing does not flash the overlay", {
+  skipUnlessBrowser()
+  # The main demo app's roots are local and return well inside the delay, so
+  # no overlay should ever be built for them.
+  app <- AppDriver$new(appDir, name = "fast-no-overlay", load_timeout = 30000)
+  on.exit(app$stop(), add = TRUE)
+
+  openChooser(app, "dir")
+  expect_false(overlayShown(app))
+})
+
+test_that("the overlay does not survive closing and reopening the dialog", {
+  skipUnlessBrowser()
+  app <- AppDriver$new(slowAppDir, name = "slow-overlay-reopen", load_timeout = 30000)
+  on.exit(app$stop(), add = TRUE)
+
+  openChooser(app, "dir")
+  switchVolume(app, "other")
+  Sys.sleep(0.5)
+  expect_true(overlayShown(app))
+
+  # Dismissing mid-request discards the modal while its timer is still pending.
+  app$run_js("$('.sF-modalContainer:visible').last().find('.modal-header button.close').trigger('click')")
+  Sys.sleep(1.5)
+
+  app$click("dir")
+  app$wait_for_idle()
+  expect_false(overlayShown(app))
+  expect_true(app$get_js("$('.sF-modalContainer:visible').last().find('.sF-dirList .sF-file-name').length > 0"))
+})

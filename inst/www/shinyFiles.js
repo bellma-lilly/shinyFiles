@@ -705,6 +705,10 @@ var shinyFiles = (function () {
     var modal = $(modal).removeClass('in');
     var backdrop = $(modal).data('backdrop').removeClass('in');
 
+    // The modal is discarded here, but its pending timer is not -- without
+    // this the overlay can be raised onto a detached node.
+    stopLoading(modal);
+
     setTimeout(function () {
       modal.remove();
       backdrop.remove();
@@ -786,6 +790,44 @@ var shinyFiles = (function () {
       )
     }
   }
+
+  // Loading overlay
+  //
+  // Listings on a networked mount can take seconds, and with no feedback that
+  // reads as a hang. The overlay goes over the current listing rather than
+  // replacing it, so the user keeps their place.
+  //
+  // It is raised on a delay: most listings return in well under this, and a
+  // spinner that flashes on every click reads as a glitch, not progress.
+  var SF_LOADING_DELAY = 250;
+
+  var startLoading = function (modal) {
+    modal = $(modal);
+    if (modal.length === 0 || modal.data('sF-loadingTimer')) return;
+
+    var timer = setTimeout(function () {
+      modal.removeData('sF-loadingTimer');
+      if (modal.find('.sF-loading').length > 0) return;
+      modal.find('.modal-body').first().append(
+        $('<div>').addClass('sF-loading')
+          .append($('<div>').addClass('sF-spinner'))
+          .append($('<div>', { text: 'Loading…' }))
+      );
+    }, SF_LOADING_DELAY);
+
+    modal.data('sF-loadingTimer', timer);
+  };
+
+  var stopLoading = function (modal) {
+    modal = $(modal);
+    if (modal.length === 0) return;
+    var timer = modal.data('sF-loadingTimer');
+    if (timer) {
+      clearTimeout(timer);
+      modal.removeData('sF-loadingTimer');
+    }
+    modal.find('.sF-loading').remove();
+  };
 
   // General functionality ends
 
@@ -1259,11 +1301,13 @@ var shinyFiles = (function () {
   var changeDirectory = function (button, modal, directory) {
     if (directory.path instanceof jQuery) directory.path = directory.path.toArray();
 
+    startLoading(modal);
     Shiny.onInputChange($(button).attr('id') + '-modal', directory);
   };
 
   var refreshDirectory = function (modal) {
     // Use timestamp to ensure change in value, triggering the backend observeEvent
+    startLoading(modal);
     Shiny.onInputChange($(modal.data('button')).attr('id') + '-refresh', (new Date()).getTime());
   }
 
@@ -2019,6 +2063,7 @@ var shinyFiles = (function () {
         $(modal).find('.sF-textChoice').toggleClass('open', false)
           .find('.sF-btn-textChoice').toggleClass('active', false);
 
+        startLoading(modal);
         Shiny.onInputChange($(button).attr('id') + '-modal', currentData);
       }
       return false;
@@ -2341,6 +2386,9 @@ var shinyFiles = (function () {
 
     if (modal.data('currentData')) {
       modal.data('currentData').contentPath = path;
+      // Highlighting a folder re-fetches its contents, which is a round trip
+      // like any other.
+      startLoading(modal);
       Shiny.onInputChange($(button).attr('id') + '-modal', modal.data('currentData'));
     }
 
@@ -2373,6 +2421,7 @@ var shinyFiles = (function () {
             })[0];
           }
         }
+        startLoading(modal);
         Shiny.onInputChange($(button).attr('id') + '-modal', modal.data('currentData'));
       }
     }
@@ -2432,6 +2481,7 @@ var shinyFiles = (function () {
       $(modal).find('.sF-textChoice').toggleClass('open', false)
         .find('.sF-btn-textChoice').toggleClass('active', false);
 
+      startLoading(modal);
       Shiny.onInputChange($(button).attr('id') + '-modal', data);
       $(button).data('back').push(currentDir);
       $(button).data('forward', []);
@@ -2469,6 +2519,7 @@ var shinyFiles = (function () {
       expanded: true
     };
 
+    startLoading(modal);
     Shiny.onInputChange($(button).attr('id') + '-modal', data);
   };
   // Directory chooser ends
@@ -2487,23 +2538,35 @@ var shinyFiles = (function () {
 
   sF.init = function () {
     Shiny.addCustomMessageHandler('shinyFiles', function (data) {
-      populateFileChooser($('.shinyFiles#' + data.id), parseFiles(data.dir), true);
+      var button = $('.shinyFiles#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateFileChooser(button, parseFiles(data.dir), true);
     });
     Shiny.addCustomMessageHandler('shinyDirectories', function (data) {
-      populateDirChooser($('.shinyDirectories#' + data.id), data.dir);
+      var button = $('.shinyDirectories#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateDirChooser(button, data.dir);
     });
     Shiny.addCustomMessageHandler('shinySave', function (data) {
-      populateFileChooser($('.shinySave#' + data.id), parseFiles(data.dir), true);
+      var button = $('.shinySave#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateFileChooser(button, parseFiles(data.dir), true);
     });
 
     Shiny.addCustomMessageHandler('shinyFiles-refresh', function (data) {
-      populateFileChooser($('.shinyFiles#' + data.id), parseFiles(data.dir), true);
+      var button = $('.shinyFiles#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateFileChooser(button, parseFiles(data.dir), true);
     });
     Shiny.addCustomMessageHandler('shinyDirectories-refresh', function (data) {
-      populateDirChooser($('.shinyDirectories#' + data.id), data.dir);
+      var button = $('.shinyDirectories#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateDirChooser(button, data.dir);
     });
     Shiny.addCustomMessageHandler('shinySave-refresh', function (data) {
-      populateFileChooser($('.shinySave#' + data.id), parseFiles(data.dir), true);
+      var button = $('.shinySave#' + data.id);
+      stopLoading($(button).data('modal'));
+      populateFileChooser(button, parseFiles(data.dir), true);
     });
 
     $(document).on('click', '.shinyFiles', function (e) {
