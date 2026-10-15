@@ -2001,77 +2001,25 @@ var shinyFiles = (function () {
     })
     var setPathFromTextInputFolderSelection = function (path, modal) {
       if (path != '') {
-        var currentDir = getCurrentDirectoryFolderSelection(modal);
-        var date = new Date();
-        var data = {
-          name: path,
-          path: currentDir.path,
-          root: currentDir.root,
-          id: date.getTime()
-        }
+        var currentData = modal.data('currentData');
 
-        var breadcrumps = modal.find('.sF-breadcrumps')
-        var volumes = breadcrumps.find('optgroup option')
+        // The raw text goes to the server untouched in `typed`. Resolving it
+        // needs the filesystem paths behind the root names, and the client is
+        // only ever told the names -- the old volume match compared the text
+        // against a root's *name*, so it never matched and an absolute path was
+        // appended under the selected root instead of resolved against it.
+        //
+        // Because the server decides which root the text lands in, it also
+        // expands the tree and sets contentPath; guessing either here would
+        // just be overwritten by the response.
+        currentData.typed = path;
 
-        //Set a new root, if there is a match in the text path
-        var foundRoot = false;
-        $(volumes).each(function (i, volume) {
-          if (path.startsWith($(volume).val())) {
-            foundRoot = true;
-            if (data.root != $(volume).val()) {
-              data.root = $(volume).val();
-              modal.data('currentData').selectedRoot = data.root;
-            }
-            data.path = path.substr(data.root.length).split(/[/\\]/);
-          }
-        })
-
-
-        if (!foundRoot) {
-          var searchPattern = new RegExp(/^[/\\]/);
-          if (searchPattern.test(path)) { //From the root
-            data.path = path.split(/[/\\]/);
-          } else { //relative path
-            data.path.push(path.split(/[/\\]/));
-          }
-        }
-
-        //deselect selected elements
         $('.sF-dirList .selected').toggleClass('selected');
-        parent = $(".sF-dirList .sF-directory :contains(" + data.root + ")").closest(".sF-directory");
-
-        //traverse the new path and expand directories
-        if (!parent.hasClass('empty')) {
-          modal.data('currentData').tree = new Object();
-          tree = modal.data('currentData').tree;
-          tree.name = "";
-          tree.expanded = false;
-          tree.empty = true;
-          tree.children = new Array(0);
-          var tpath = JSON.parse(JSON.stringify(data.path))
-          tpath.shift();
-          for (name of tpath) {
-            tree.expanded = true;
-            tree.empty = false;
-            tree.children = new Array(new Object);
-            tree = tree.children[0];
-            tree.name = name
-            tree.expanded = false;
-            tree.empty = true;
-            tree.children = new Array(0);
-          }
-        }
-
-        //select the final path element
-        parent.toggleClass('selected');
 
         $(modal).find('.sF-textChoice').toggleClass('open', false)
           .find('.sF-btn-textChoice').toggleClass('active', false);
 
-        modal.data('currentData').contentPath = data.path;
-
-        Shiny.onInputChange($(button).attr('id') + '-modal', modal.data('currentData'));
-
+        Shiny.onInputChange($(button).attr('id') + '-modal', currentData);
       }
       return false;
     };
@@ -2468,39 +2416,22 @@ var shinyFiles = (function () {
       var button = $($(modal).data('button'));
       var currentDir = getCurrentDirectory(modal);
       var date = new Date();
+      // The raw text goes to the server untouched in `typed`. Resolving it
+      // needs the filesystem paths behind the root names, and the client is
+      // only ever told the names -- the old volume match compared the text
+      // against a root's *name*, so it never matched and an absolute path was
+      // appended under the selected root instead of resolved against it.
       var data = {
         name: path,
         path: currentDir.path,
         root: currentDir.root,
+        typed: path,
         id: date.getTime()
-      }
-
-      var breadcrumps = modal.find('.sF-breadcrumps')
-      var volumes = breadcrumps.find('optgroup option')
-
-      //Set a new root, if there is a match in the text path
-      var foundRoot = false;
-      $(volumes).each(function (i, volume) {
-        if (path.startsWith($(volume).val())) {
-          data.root = $(volume).val();
-          data.path = path.substr(data.root.length).split(/[/\\]/)
-          foundRoot = true;
-        }
-      })
-      if (!foundRoot) {
-        var searchPattern = new RegExp(/^[/\\]/);
-        if (searchPattern.test(path)) { //From the root
-          data.path = path.split(/[/\\]/);
-        } else { //relative path
-          data.path.push(path.split(/[/\\]/));
-        }
       }
 
       $(modal).find('.sF-textChoice').toggleClass('open', false)
         .find('.sF-btn-textChoice').toggleClass('active', false);
 
-
-      modal.data('currentData').contentPath = data.path;
       Shiny.onInputChange($(button).attr('id') + '-modal', data);
       $(button).data('back').push(currentDir);
       $(button).data('forward', []);

@@ -135,6 +135,126 @@ fileGetter <- function(roots, restrictions, filetypes, pattern, hidden = FALSE) 
   }
 }
 
+#' Resolve text typed into the path box to a root and path
+#'
+#' The path box lets a user type a location instead of clicking to it. Matching
+#' absolute input against the configured roots has to happen here rather than in
+#' the browser: the client is only ever told root *names*, never the filesystem
+#' paths behind them, so it cannot tell which root `/some/abs/path` belongs to.
+#' Treating such input as root-relative is what made an absolute path resolve to
+#' `<root>/some/abs/path` and report as non-existent.
+#'
+#' When several roots contain the path the one already selected wins — the
+#' listing is identical either way, so switching roots would only surprise the
+#' user. Failing that the most specific (longest) root is used.
+#'
+#' @param roots A named vector of absolute filepaths or a function returning
+#' one.
+#'
+#' @param text The raw string typed into the path box.
+#'
+#' @param currentRoot The name of the root currently selected in the dialog.
+#'
+#' @return A list with elements `root` (a root name) and `path` (a character
+#' vector of path segments), or `NULL` when the text names a location outside
+#' every root.
+#'
+#' @importFrom fs path path_norm path_real path_has_parent path_split path_expand
+#'
+#' @noRd
+#'
+resolveTypedPath <- function(roots, text, currentRoot) {
+  currentRoots <- if (inherits(roots, "function")) roots() else roots
+  if (all(is.null(names(currentRoots)))) {
+    stop("Roots must be a named vector or a function returning one")
+  }
+  if (length(currentRoots) == 0) return(NULL)
+
+  # Long enough for any real path, short enough that a pasted blob is rejected
+  # before it reaches the filesystem.
+  if (!is.character(text) || length(text) != 1 || is.na(text)) return(NULL)
+  if (nchar(text) > 4096) return(NULL)
+
+  if (all(is.null(currentRoot)) || !currentRoot %in% names(currentRoots)) {
+    currentRoot <- names(currentRoots)[1]
+  }
+
+  text <- trimws(text)
+  if (!nzchar(text)) return(list(root = currentRoot, path = character(0)))
+
+  candidate <- try(path_expand(text), silent = TRUE)
+  if (inherits(candidate, "try-error")) return(NULL)
+  if (!isAbsolutePath(candidate)) {
+    candidate <- path(currentRoots[currentRoot], candidate)
+  }
+
+  # path_real resolves symlinks, so a link pointing out of the root cannot be
+  # used to smuggle a path past the containment check. It needs the path to
+  # exist, so fall back to lexical normalization for a path that does not.
+  target <- try(path_real(candidate), silent = TRUE)
+  if (inherits(target, "try-error")) {
+    target <- try(path_norm(candidate), silent = TRUE)
+    if (inherits(target, "try-error")) return(NULL)
+  }
+
+  matches <- Filter(Negate(is.null), lapply(names(currentRoots), function(name) {
+    rootPath <- try(path_real(currentRoots[name]), silent = TRUE)
+    if (inherits(rootPath, "try-error")) {
+      rootPath <- path_norm(currentRoots[name])
+    }
+    if (!pathWithin(target, rootPath)) return(NULL)
+    list(root = name, rootPath = rootPath)
+  }))
+  if (length(matches) == 0) return(NULL)
+
+  selected <- Filter(function(m) m$root == currentRoot, matches)
+  if (length(selected) == 0) {
+    depths <- vapply(matches, function(m) length(path_split(m$rootPath)[[1]]), integer(1))
+    selected <- matches[which.max(depths)]
+  }
+  chosen <- selected[[1]]
+
+  segments <- relativeSegments(target, chosen$rootPath)
+  list(root = chosen$root, path = segments)
+}
+
+#' Is a path absolute, on either platform convention
+#'
+#' @noRd
+#'
+isAbsolutePath <- function(p) {
+  grepl("^(/|\\\\|[A-Za-z]:[/\\\\])", p)
+}
+
+#' Is `target` the directory `base` itself, or inside it
+#'
+#' Compares path components rather than string prefixes: a `startsWith` check
+#' accepts a sibling whose name merely begins with the base's name, so a root of
+#' `/data` would also admit `/data2`.
+#'
+#' @importFrom fs path_has_parent
+#'
+#' @noRd
+#'
+pathWithin <- function(target, base) {
+  target <- as.character(target)
+  base <- as.character(base)
+  identical(target, base) || isTRUE(path_has_parent(target, base))
+}
+
+#' Path segments of `target` relative to the root `base`
+#'
+#' @importFrom fs path_split
+#'
+#' @noRd
+#'
+relativeSegments <- function(target, base) {
+  targetParts <- path_split(as.character(target))[[1]]
+  baseParts <- path_split(as.character(base))[[1]]
+  if (length(targetParts) <= length(baseParts)) return(character(0))
+  targetParts[seq(length(baseParts) + 1, length(targetParts))]
+}
+
 #' Create a connection to the server side filesystem
 #'
 #' These function sets up the required connection to the client in order for the
@@ -231,6 +351,19 @@ shinyFileChoose <- function(input, id, updateFreq = 0, session = getSession(),
       dir <- list(dir = defaultPath, root = defaultRoot)
     } else {
       dir <- list(dir = dir$path, root = dir$root)
+      # Text typed into the path box may name an absolute location in any root,
+      # which only the server can match against the configured roots.
+      typed <- input[[paste0(id, "-modal")]]$typed
+      if (is.character(typed) && length(typed) == 1) {
+        resolved <- resolveTypedPath(list(...)$roots, typed, dir$root)
+        if (!is.null(resolved)) {
+          dir <- list(dir = resolved$path, root = resolved$root)
+        } else {
+          # Outside every root: keep it root-relative so the dialog reports a
+          # missing folder rather than silently going somewhere else.
+          dir$dir <- strsplit(typed, "[/\\\\]")[[1]]
+        }
+      }
     }
     dir$dir <- paste0(dir$dir, collapse = "/")
     ## allows reactive links (e.g., for filetypes)

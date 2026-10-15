@@ -164,6 +164,31 @@ dirCreator <- function(roots, ...) {
     dir_create(location)
   }
 }
+#' Build an expanded tree along a path
+#'
+#' The directory chooser renders a tree, and a node is only recursed into when
+#' its `expanded` flag is set. Jumping to a typed path therefore needs the whole
+#' chain from the root expanded, otherwise the destination is not rendered.
+#'
+#' @param segments A character vector of path segments below the root.
+#'
+#' @return A tree shell suitable for [traverseDirs()].
+#'
+#' @noRd
+#'
+expandedTreeAlong <- function(segments) {
+  tree <- list(name = "", expanded = TRUE, children = list())
+  if (length(segments) == 0) return(tree)
+
+  # Built from the leaf up, so each parent gets its already-expanded child.
+  node <- list(name = segments[length(segments)], expanded = TRUE, children = list())
+  for (i in rev(seq_len(length(segments) - 1))) {
+    node <- list(name = segments[i], expanded = TRUE, children = list(node))
+  }
+  tree$children <- list(node)
+  tree
+}
+
 #' @rdname shinyFiles-observers
 #'
 #' @examples
@@ -220,12 +245,37 @@ shinyDirChoose <- function(
       dir <- list(tree = list(name = defaultPath, expanded = TRUE), root = defaultRoot)
       files <- list(dir = NA, root = tree$selectedRoot)
     } else {
-      dir <- list(tree = tree$tree, root = tree$selectedRoot)
-      files <- list(dir = unlist(tree$contentPath), root = tree$selectedRoot)
       passedRoots <- list(...)$roots
       passedPathRoots <- if (inherits(passedRoots, "function")) passedRoots() else passedRoots
-      passedPath <- list(passedPathRoots[tree$selectedRoot])
-      exist = dir.exists(do.call(path,c(passedPath,files$dir[-1])))
+
+      # Text typed into the path box may name an absolute location in any root,
+      # which only the server can match against the configured roots. The tree
+      # is expanded here too: the client cannot know which root the text landed
+      # in, so it cannot build the chain that makes the destination render.
+      typed <- tree$typed
+      resolved <- if (is.character(typed) && length(typed) == 1) {
+        resolveTypedPath(passedRoots, typed, tree$selectedRoot)
+      } else {
+        NULL
+      }
+
+      if (!is.null(resolved)) {
+        dir <- list(tree = expandedTreeAlong(resolved$path), root = resolved$root)
+        files <- list(dir = c("", resolved$path), root = resolved$root)
+        exist <- dir.exists(do.call(path, c(
+          list(passedPathRoots[resolved$root]), as.list(resolved$path)
+        )))
+      } else {
+        dir <- list(tree = tree$tree, root = tree$selectedRoot)
+        files <- list(dir = unlist(tree$contentPath), root = tree$selectedRoot)
+        if (is.character(typed) && length(typed) == 1) {
+          # Outside every root: report a missing folder rather than navigating.
+          exist <- FALSE
+        } else {
+          passedPath <- list(passedPathRoots[tree$selectedRoot])
+          exist <- dir.exists(do.call(path, c(passedPath, files$dir[-1])))
+        }
+      }
     }
     newDir <- do.call(dirGet, dir)
     if (.is_not(files$dir)) {

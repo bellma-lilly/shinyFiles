@@ -54,7 +54,18 @@ shinyFileSave <- function(input, id, updateFreq = 0, session = getSession(),
     if (.is_not(dir)) {
       dir <- list(dir = defaultPath, root = defaultRoot)
     } else {
+      typed <- dir$typed
       dir <- list(dir = dir$path, root = dir$root)
+      # Text typed into the path box may name an absolute location in any root,
+      # which only the server can match against the configured roots.
+      if (is.character(typed) && length(typed) == 1) {
+        resolved <- resolveTypedPath(list(...)$roots, typed, dir$root)
+        if (!is.null(resolved)) {
+          dir <- list(dir = resolved$path, root = resolved$root)
+        } else {
+          dir$dir <- strsplit(typed, "[/\\\\]")[[1]]
+        }
+      }
     }
     dir$dir <- paste0(dir$dir, collapse = "/")
     newDir <- do.call(fileGet, dir)
