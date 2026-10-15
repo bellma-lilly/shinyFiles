@@ -1,5 +1,13 @@
 # shinyFiles (development version)
 
+* Typed paths in the path box ("pencil") are now resolved against the
+  configured roots on the server, so an absolute path is navigated to rather
+  than appended under the currently selected volume. Previously an absolute
+  path only worked when its root happened to already be selected, and otherwise
+  reported "Folder does not exist". Paths outside every root do not navigate.
+* Added a loading overlay while a directory listing is in flight, so slow
+  listings on networked filesystems no longer look like a hang.
+
 # shinyFiles 0.9.4
 
 * Fixed #185 (@pietrodita)
