@@ -44,5 +44,8 @@ BugReports: https://github.com/thomasp85/shinyFiles/issues
 Roxygen: list(markdown = TRUE)
 Suggests:
     covr,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    shinytest2,
+    chromote,
+    withr
 Config/testthat/edition: 3
