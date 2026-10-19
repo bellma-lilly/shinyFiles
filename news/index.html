@@ -51,6 +51,9 @@
 <h2 class="page-header" data-toc-text="development version" id="shinyfiles-development-version">shinyFiles (development version)<a class="anchor" aria-label="anchor" href="#shinyfiles-development-version"></a></h2>
 <ul><li>Typed paths in the path box (“pencil”) are now resolved against the configured roots on the server, so an absolute path is navigated to rather than appended under the currently selected volume. Previously an absolute path only worked when its root happened to already be selected, and otherwise reported “Folder does not exist”. Paths outside every root do not navigate.</li>
 <li>Added a loading overlay while a directory listing is in flight, so slow listings on networked filesystems no longer look like a hang.</li>
+<li>
+<code><a href="../reference/shinyFiles-observers.html">shinyFileSave()</a></code> now defers building its <code>fileGetter</code>/<code>dirCreator</code> until a request comes in, matching <code><a href="../reference/shinyFiles-observers.html">shinyFileChoose()</a></code>, so <code>...</code> arguments (e.g. <code>filetypes</code>) may be reactive expressions (thomasp85/shinyFiles#196, <a href="https://github.com/thomasp85/shinyFiles/issues/195" class="external-link">#195</a>, <a href="https://github.com/WilDoane" class="external-link">@WilDoane</a>).</li>
+<li>Fixed the keydown (Enter/Escape) and backdrop-click handlers losing track of which modal is on top when more than one shinyFiles dialog is open at once, so keyboard shortcuts and backdrop dismissal could act on the wrong dialog (thomasp85/shinyFiles#201, <a href="https://github.com/Tazovsky" class="external-link">@Tazovsky</a>).</li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.9.4" id="shinyfiles-094">shinyFiles 0.9.4<a class="anchor" aria-label="anchor" href="#shinyfiles-094"></a></h2>
