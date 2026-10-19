@@ -7,6 +7,10 @@
   reported "Folder does not exist". Paths outside every root do not navigate.
 * Added a loading overlay while a directory listing is in flight, so slow
   listings on networked filesystems no longer look like a hang.
+* `shinyFileSave()` now defers building its `fileGetter`/`dirCreator` until a
+  request comes in, matching `shinyFileChoose()`, so `...` arguments (e.g.
+  `filetypes`) may be reactive expressions (thomasp85/shinyFiles#196,
+  #195, @WilDoane).
 
 # shinyFiles 0.9.4
 
