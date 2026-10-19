@@ -11,6 +11,10 @@
   request comes in, matching `shinyFileChoose()`, so `...` arguments (e.g.
   `filetypes`) may be reactive expressions (thomasp85/shinyFiles#196,
   #195, @WilDoane).
+* Fixed the keydown (Enter/Escape) and backdrop-click handlers losing track
+  of which modal is on top when more than one shinyFiles dialog is open at
+  once, so keyboard shortcuts and backdrop dismissal could act on the wrong
+  dialog (thomasp85/shinyFiles#201, @Tazovsky).
 
 # shinyFiles 0.9.4
 
