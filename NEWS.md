@@ -15,6 +15,13 @@
   of which modal is on top when more than one shinyFiles dialog is open at
   once, so keyboard shortcuts and backdrop dismissal could act on the wrong
   dialog (thomasp85/shinyFiles#201, @Tazovsky).
+* The volume dropdown now has a "Recent" group listing folders where a
+  selection or save was recently confirmed, so a user can jump straight back to
+  them. The list is kept in the browser's local storage (per user and browser,
+  shared by every shinyFiles button on the page), and only folders inside the
+  current dialog's roots are shown. Control the length with the new `recent`
+  argument to `shinyFileChoose()`, `shinyDirChoose()` and `shinyFileSave()`
+  (default 10, `0` to disable).
 
 # shinyFiles 0.9.4
 
