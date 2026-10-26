@@ -14,6 +14,7 @@ shinyFileChoose(
   session = getSession(),
   defaultRoot = NULL,
   defaultPath = "",
+  recent = 10,
   ...
 )
 
@@ -25,6 +26,7 @@ shinyDirChoose(
   defaultPath = "",
   defaultRoot = NULL,
   allowDirCreate = TRUE,
+  recent = 10,
   ...
 )
 
@@ -36,6 +38,7 @@ shinyFileSave(
   defaultPath = "",
   defaultRoot = NULL,
   allowDirCreate = TRUE,
+  recent = 10,
   ...
 )
 }
@@ -61,6 +64,13 @@ shown only when a shinyFiles button is clicked again}
 can be either \code{'wd'} or \code{'home'}.}
 
 \item{defaultPath}{The default relative path specified given the \code{defaultRoot}.}
+
+\item{recent}{The number of recently used folders to offer under "Recent" in
+the volume dropdown. A folder is remembered when a selection or save is
+confirmed in it. The list is kept in the browser's local storage, so it is
+per user and browser, persists across sessions, and is shared by all
+shinyFiles buttons on the page; only folders inside the roots of the current
+dialog are shown. Set to \code{0} to disable.}
 
 \item{...}{Arguments to be passed on to \code{\link[=fileGetter]{fileGetter()}} or \code{\link[=dirGetter]{dirGetter()}}.}
 
