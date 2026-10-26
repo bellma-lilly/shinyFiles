@@ -10,3 +10,4 @@ shinyFiles.code-workspace
 ^codecov\.yml$
 ^\.github$
 ^CRAN-SUBMISSION$
+^bench$
