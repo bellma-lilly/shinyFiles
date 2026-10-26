@@ -27,7 +27,7 @@ NULL
 #' @export
 #'
 shinyFileSave <- function(input, id, updateFreq = 0, session = getSession(),
-                          defaultPath = "", defaultRoot = NULL, allowDirCreate = TRUE, ...) {
+                          defaultPath = "", defaultRoot = NULL, allowDirCreate = TRUE, recent = 10, ...) {
   currentDir <- list()
   lastDirCreate <- NULL
   clientId <- session$ns(id)
@@ -71,6 +71,7 @@ shinyFileSave <- function(input, id, updateFreq = 0, session = getSession(),
     }
     dir$dir <- paste0(dir$dir, collapse = "/")
     newDir <- do.call(fileGet, dir)
+    newDir$recentLimit <- recent
     if (isTRUE(newDir$exist)) {
       currentDir <<- newDir
       session$sendCustomMessage(message, list(id = clientId, dir = newDir))
@@ -81,6 +82,7 @@ shinyFileSave <- function(input, id, updateFreq = 0, session = getSession(),
       # shorten the directory (include the slash at the end to make sure we don't look for a non-directory)
       dir$dir <- sub("(.*/).*$", "\\1", dir$dir)
       newDir <- do.call(fileGet, dir)
+      newDir$recentLimit <- recent
       if (isTRUE(newDir$exist)) { # backing up once, we find a valid directory
         newDir$selectedFile <- selectedFile
         currentDir <<- newDir
