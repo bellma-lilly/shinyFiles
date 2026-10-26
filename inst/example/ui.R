@@ -9,6 +9,7 @@ if (require(bslib)) {
 
 fluidPage(
   theme = theme, 
+  tags$head(tags$script(src = "code-below.js")),
   headerPanel(
     "Selections with shinyFiles",
     "shinyFiles example"

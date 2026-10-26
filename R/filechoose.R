@@ -87,23 +87,16 @@ fileGetter <- function(roots, restrictions, filetypes, pattern, hidden = FALSE) 
     
     writable <- as.logical(file_access(fulldir, "write"))
     files <- suppressWarnings(dir_ls(fulldir, all = hidden, fail = FALSE))
-  
-    if (!is.null(restrictions) && length(files) != 0) {
-      if (length(files) == 1) {
-        keep <- !any(sapply(restrictions, function(x) {
-          grepl(x, files, fixed = T)
-        }))
-      } else {
-        keep <- !apply(sapply(restrictions, function(x) {
-          grepl(x, files, fixed = T)
-        }), 1, any)
-      }
-      files <- files[keep]
-    }
+    files <- dropRestricted(files, restrictions)
     fileInfo <- suppressWarnings(file_info(files, fail = FALSE))
     fileInfo$filename <- path_file(files)
     fileInfo$extension <- tolower(path_ext(files))
-    fileInfo$isdir <- dir.exists(files)
+    # file_info() has already stat'ed every entry, so its type says which are
+    # folders; only symlinks need resolving, rather than a dir.exists() each.
+    type <- as.character(fileInfo$type)
+    fileInfo$isdir <- type %in% "directory"
+    links <- type %in% "symlink"
+    fileInfo$isdir[links] <- dir.exists(files[links])
     fileInfo$mtime <- as.integer(fileInfo$modification_time) * 1000
     fileInfo$ctime <- as.integer(fileInfo$birth_time) * 1000
     fileInfo$atime <- as.integer(fileInfo$access_time) * 1000
@@ -133,6 +126,24 @@ fileGetter <- function(roots, restrictions, filetypes, pattern, hidden = FALSE) 
       selectedFile = selectedFile
     )
   }
+}
+
+#' Drop paths that match any of the restrictions
+#'
+#' @noRd
+#'
+dropRestricted <- function(files, restrictions) {
+  if (is.null(restrictions) || length(files) == 0) return(files)
+  if (length(files) == 1) {
+    keep <- !any(sapply(restrictions, function(x) {
+      grepl(x, files, fixed = T)
+    }))
+  } else {
+    keep <- !apply(sapply(restrictions, function(x) {
+      grepl(x, files, fixed = T)
+    }), 1, any)
+  }
+  files[keep]
 }
 
 #' Resolve text typed into the path box to a root and path

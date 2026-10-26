@@ -22,6 +22,25 @@
   current dialog's roots are shown. Control the length with the new `recent`
   argument to `shinyFileChoose()`, `shinyDirChoose()` and `shinyFileSave()`
   (default 10, `0` to disable).
+* The folder chooser is much faster on network filesystems. Building the tree
+  no longer lists the inside of every collapsed folder just to decide whether
+  to draw an expand arrow (a folder with no subfolders now loses its arrow
+  when opened), and both the tree and the file listing tell folders from files
+  by the entry type the listing already returned, instead of a separate lookup
+  for each entry. On a home folder with 490 entries, opening the folder
+  chooser went from about 8,300 filesystem lookups to under 600.
+* Clicks inside an open folder chooser no longer re-read every expanded
+  folder. Listings are kept for as long as the dialog is open, so a click only
+  reads the folder it touches. They are re-read when the dialog is reopened,
+  on refresh, on each `updateFreq` tick, and after creating a folder, so
+  changes made outside the dialog show up at those points rather than on
+  every click.
+* After the folder chooser draws its tree, the server checks the collapsed
+  folders in the background and the expand arrows disappear from those with no
+  subfolders, without the user having to click them. The check runs in short
+  slices between requests, so it doesn't hold up the dialog or later clicks,
+  and it stops when a newer response or the end of the session replaces it.
+  This adds `later` to Imports.
 
 # shinyFiles 0.9.4
 

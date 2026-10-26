@@ -2595,6 +2595,43 @@ var shinyFiles = (function () {
     startLoading(modal);
     Shiny.onInputChange($(button).attr('id') + '-modal', data);
   };
+  // The server draws collapsed folders as expandable without looking inside
+  // them, then lists them in the background and reports the empty ones here.
+  // Both the DOM and the tree the client sends back are updated, so the next
+  // response agrees with what is on screen.
+  var markEmptyFolders = function (button, root, paths) {
+    var modal = $(button).data('modal');
+    if (!modal) return;
+    var data = modal.data('currentData');
+    if (!data || data.selectedRoot != root) return;
+
+    var childNamed = function (element, name) {
+      return element.children('.sF-content').children('.sF-directory').filter(function () {
+        return $(this).children('.sF-file-name').children().text() === name;
+      }).first();
+    };
+    var nodeNamed = function (node, name) {
+      return (node.children || []).filter(function (d) {
+        return d != null && d.name == name;
+      })[0];
+    };
+
+    $.makeArray(paths).forEach(function (path) {
+      var element = modal.find('.sF-dirList>div').first();
+      var node = data.tree;
+      $.makeArray(path).forEach(function (name) {
+        if (element.length) element = childNamed(element, name);
+        if (node) node = nodeNamed(node, name);
+      });
+      // A folder the user opened meanwhile is left alone: its own response
+      // already says whether it is empty.
+      if (element.length && !element.hasClass('expanded')) {
+        element.addClass('empty').removeClass('closed');
+      }
+      if (node && !node.expanded) node.empty = true;
+    });
+  };
+
   // The tree only renders a folder whose ancestors are all expanded, so the
   // chain down to it is sent along -- the same shell the server builds for a
   // typed path.
@@ -2641,6 +2678,9 @@ var shinyFiles = (function () {
       var button = $('.shinyDirectories#' + data.id);
       stopLoading($(button).data('modal'));
       populateDirChooser(button, data.dir);
+    });
+    Shiny.addCustomMessageHandler('shinyDirectories-empty', function (data) {
+      markEmptyFolders($('.shinyDirectories#' + data.id), data.root, data.paths);
     });
     Shiny.addCustomMessageHandler('shinySave', function (data) {
       var button = $('.shinySave#' + data.id);
