@@ -213,7 +213,7 @@ expandedTreeAlong <- function(segments) {
 #'
 shinyDirChoose <- function(
   input, id, updateFreq = 0, session = getSession(),
-  defaultPath = "", defaultRoot = NULL, allowDirCreate = TRUE, ...
+  defaultPath = "", defaultRoot = NULL, allowDirCreate = TRUE, recent = 10, ...
 ) {
   dirGet <- do.call(dirGetter, list(...))
   fileGet <- do.call(fileGetter, list(...))
@@ -291,6 +291,7 @@ shinyDirChoose <- function(
     }
     newDir$exist <- exist
     newDir$root <- files$root
+    newDir$recentLimit <- recent
     currentDir <<- newDir
     session$sendCustomMessage(message, list(id = clientId, dir = newDir))
     if (updateFreq > 0) invalidateLater(updateFreq, session)
