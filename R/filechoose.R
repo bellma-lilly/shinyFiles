@@ -300,6 +300,13 @@ relativeSegments <- function(target, base) {
 #' 
 #' @param allowDirCreate Logical that indicates if creating new directories by the user is allowed.
 #'
+#' @param recent The number of recently used folders to offer under "Recent" in
+#' the volume dropdown. A folder is remembered when a selection or save is
+#' confirmed in it. The list is kept in the browser's local storage, so it is
+#' per user and browser, persists across sessions, and is shared by all
+#' shinyFiles buttons on the page; only folders inside the roots of the current
+#' dialog are shown. Set to `0` to disable.
+#'
 #' @param ... Arguments to be passed on to [fileGetter()] or [dirGetter()].
 #'
 #' @return A reactive observer that takes care of the server side logic of the
@@ -340,7 +347,7 @@ relativeSegments <- function(target, base) {
 #' @export
 #'
 shinyFileChoose <- function(input, id, updateFreq = 0, session = getSession(),
-                            defaultRoot=NULL, defaultPath="", ...) {
+                            defaultRoot=NULL, defaultPath="", recent = 10, ...) {
   currentDir <- list()
   clientId <- session$ns(id)
 
@@ -369,6 +376,7 @@ shinyFileChoose <- function(input, id, updateFreq = 0, session = getSession(),
     ## allows reactive links (e.g., for filetypes)
     fileGet <- do.call(fileGetter, list(...))
     newDir <- do.call(fileGet, dir)
+    newDir$recentLimit <- recent
     currentDir <<- newDir
     session$sendCustomMessage(message, list(id = clientId, dir = newDir))
     if (updateFreq > 0) invalidateLater(updateFreq, session)

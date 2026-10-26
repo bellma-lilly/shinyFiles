@@ -576,7 +576,8 @@ var shinyFiles = (function () {
       exist: data.exist,
       rootNames: data.roots,
       selectedRoot: data.root,
-      selectedFile: data.selectedFile
+      selectedFile: data.selectedFile,
+      recentLimit: data.recentLimit
     };
   };
 
@@ -739,6 +740,8 @@ var shinyFiles = (function () {
         })),
         root: files.root
       };
+      var directory = getCurrentDirectory(modal);
+      addRecent(directory.root, directory.path, $(modal).data('currentData').recentLimit);
     } else {
       var path = getPath($(modal).find('.sF-dirList .selected'));
       $(button).data('directory', path)
@@ -747,6 +750,7 @@ var shinyFiles = (function () {
         path: path,
         root: $(modal).data('currentData').selectedRoot
       };
+      addRecent(data.root, data.path, $(modal).data('currentData').recentLimit);
     }
 
     removeFileChooser(button, modal, data);
@@ -827,6 +831,63 @@ var shinyFiles = (function () {
       modal.removeData('sF-loadingTimer');
     }
     modal.find('.sF-loading').remove();
+  };
+
+  // Recent directories
+  //
+  // Kept in the browser rather than on the server: it is per user without the
+  // server having to know who the user is (apps on Posit Connect often run as
+  // one shared account), and survives reloads and restarts. Entries are only
+  // root names and path segments -- the same thing the client sends on every
+  // navigation -- so the server's usual containment checks still apply.
+  //
+  // The key is scoped to the page path because many apps can share an origin
+  // (e.g. every app on a Connect server), and their roots are unrelated.
+  var RECENT_KEY = 'shinyFiles-recent:' + window.location.pathname;
+  // More than any one dialog shows, so buttons with different roots do not
+  // push each other's entries out.
+  var RECENT_STORED = 50;
+
+  var readRecent = function () {
+    try {
+      var entries = JSON.parse(window.localStorage.getItem(RECENT_KEY));
+      if (!Array.isArray(entries)) return [];
+      return entries.filter(function (d) {
+        return d && typeof d.root === 'string' && Array.isArray(d.path);
+      });
+    } catch (err) {
+      // localStorage can be disabled or full; the feature just goes quiet.
+      return [];
+    }
+  };
+
+  var addRecent = function (root, path, limit) {
+    if (!(limit > 0) || root == null) return;
+    path = $.makeArray(path).filter(function (d) { return d !== '' && d != null; })
+      .map(String);
+    var entries = readRecent().filter(function (d) {
+      return !(d.root === root && compareArrays(d.path, path));
+    });
+    entries.unshift({ root: root, path: path });
+    try {
+      window.localStorage.setItem(RECENT_KEY, JSON.stringify(entries.slice(0, RECENT_STORED)));
+    } catch (err) { }
+  };
+
+  var appendRecentOptions = function (select, rootNames, limit) {
+    if (!(limit > 0)) return;
+    rootNames = $.makeArray(rootNames);
+    var entries = readRecent().filter(function (d) {
+      return rootNames.indexOf(d.root) != -1;
+    }).slice(0, limit);
+    if (entries.length == 0) return;
+
+    var group = $('<optgroup>', { label: 'Recent' }).addClass('sF-recent').appendTo(select);
+    entries.forEach(function (d) {
+      group.append(
+        $('<option>', { text: [d.root].concat(d.path).join('/'), value: '' }).data('recent', d)
+      );
+    });
   };
 
   // General functionality ends
@@ -1150,6 +1211,7 @@ var shinyFiles = (function () {
           $('<option>', { html: (d == data.selectedRoot ? '&#9679; ' : '&#9675; ') + d, value: d })
         )
       })
+      appendRecentOptions(modal.find('.sF-breadcrumps'), data.rootNames, data.recentLimit);
     };
 
     if (forceUpdate || newLocation) {
@@ -1359,7 +1421,11 @@ var shinyFiles = (function () {
     var newDir = {}
     var selection = $(select).find(':selected');
 
-    if (selection.parent().is('optgroup')) {
+    if (selection.parent().hasClass('sF-recent')) {
+      var recent = selection.data('recent');
+      newDir.path = [''].concat(recent.path);
+      newDir.root = recent.root;
+    } else if (selection.parent().is('optgroup')) {
       newDir.path = '';
       newDir.root = selection.val();
     } else {
@@ -1860,6 +1926,7 @@ var shinyFiles = (function () {
     var dir = getCurrentDirectory(modal);
     var file = getFilename(modal);
     $.extend(file, dir);
+    addRecent(dir.root, dir.path, $(modal).data('currentData').recentLimit);
 
     $(button).data('file', file)
       .trigger('save', file);
@@ -2142,7 +2209,12 @@ var shinyFiles = (function () {
 
     // Set volume
     modal.find('.sF-breadcrumps').on('change', function () {
-      changeVolume($(this).val(), modal);
+      var selection = $(this).find(':selected');
+      if (selection.parent().hasClass('sF-recent')) {
+        openRecentFolder(selection.data('recent'), modal);
+      } else {
+        changeVolume($(this).val(), modal);
+      }
     })
 
     // Directory tree
@@ -2217,6 +2289,7 @@ var shinyFiles = (function () {
         $('<option>', { text: d })
       )
     })
+    appendRecentOptions(breadcrumps, data.rootNames, data.recentLimit);
     breadcrumps.val(data.selectedRoot);
 
     var dirContent = modal.find('.sF-dirContent');
@@ -2518,6 +2591,28 @@ var shinyFiles = (function () {
       name: '',
       expanded: true
     };
+
+    startLoading(modal);
+    Shiny.onInputChange($(button).attr('id') + '-modal', data);
+  };
+  // The tree only renders a folder whose ancestors are all expanded, so the
+  // chain down to it is sent along -- the same shell the server builds for a
+  // typed path.
+  var openRecentFolder = function (recent, modal) {
+    var button = $(modal).data('button');
+    var data = $(modal).data('currentData');
+
+    var tree = { name: '', expanded: true, children: [] };
+    var node = tree;
+    recent.path.forEach(function (d) {
+      var child = { name: d, expanded: true, children: [] };
+      node.children = [child];
+      node = child;
+    });
+
+    data.selectedRoot = recent.root;
+    data.tree = tree;
+    data.contentPath = [''].concat(recent.path);
 
     startLoading(modal);
     Shiny.onInputChange($(button).attr('id') + '-modal', data);
