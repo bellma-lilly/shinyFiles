@@ -66,6 +66,7 @@ or adding it manually. See <code><a href="shinyFiles-buttons.html">shinyFiles-bu
 <span>  session <span class="op">=</span> <span class="fu">getSession</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  defaultRoot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  defaultPath <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  recent <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -77,6 +78,7 @@ or adding it manually. See <code><a href="shinyFiles-buttons.html">shinyFiles-bu
 <span>  defaultPath <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  defaultRoot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  allowDirCreate <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  recent <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -88,6 +90,7 @@ or adding it manually. See <code><a href="shinyFiles-buttons.html">shinyFiles-bu
 <span>  defaultPath <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  defaultRoot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  allowDirCreate <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  recent <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -128,6 +131,15 @@ can be either <code>'wd'</code> or <code>'home'</code>.</p></dd>
 
 <dt id="arg-defaultpath">defaultPath<a class="anchor" aria-label="anchor" href="#arg-defaultpath"></a></dt>
 <dd><p>The default relative path specified given the <code>defaultRoot</code>.</p></dd>
+
+
+<dt id="arg-recent">recent<a class="anchor" aria-label="anchor" href="#arg-recent"></a></dt>
+<dd><p>The number of recently used folders to offer under "Recent" in
+the volume dropdown. A folder is remembered when a selection or save is
+confirmed in it. The list is kept in the browser's local storage, so it is
+per user and browser, persists across sessions, and is shared by all
+shinyFiles buttons on the page; only folders inside the roots of the current
+dialog are shown. Set to <code>0</code> to disable.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
