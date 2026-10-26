@@ -5,3 +5,5 @@
 .DS_Store
 build/
 shinyFiles.code-workspace
+bench/fixture/
+bench/results/
