@@ -9,6 +9,8 @@ NULL
 #' it to reflect the current state of the file system as well as the settings
 #' for each node. Children (contained folders) are recursed into if the parents
 #' expanded element is set to TRUE, no matter if children are currently present.
+#' Collapsed children are not listed, so they are reported as non-empty until
+#' expanded.
 #'
 #' @param tree A list representing the tree structure of the file system to
 #' traverse. Each element should at least contain the elements 'name' and
@@ -23,31 +25,18 @@ NULL
 #' @param hidden A logical value specifying whether hidden folders should be
 #' returned or not
 #'
+#' @param cache An optional listing cache (see `listingCache()`). Folders
+#' already listed in it are not read again.
+#'
 #' @return A list of the same format as 'tree', but with updated values to
 #' reflect the current file system state.
 #'
 #' @importFrom fs path dir_ls file_info path_file
 #'
-traverseDirs <- function(tree, root, restrictions, hidden) {
+traverseDirs <- function(tree, root, restrictions, hidden, cache = NULL) {
   location <- path(root, tree$name)
-  if (!dir.exists(location)) return(NULL)
-
-  files <- suppressWarnings(dir_ls(location, all = hidden, fail = FALSE))
-
-  if (!is.null(restrictions) && length(files) != 0) {
-    if (length(files) == 1) {
-      keep <- !any(sapply(restrictions, function(x) {
-        grepl(x, files, fixed = T)
-      }))
-    } else {
-      keep <- !apply(sapply(restrictions, function(x) {
-        grepl(x, files, fixed = T)
-      }), 1, any)
-    }
-    files <- files[keep]
-  }
-
-  folders <- path_file(files[dir.exists(files)])
+  folders <- folderNamesIn(location, restrictions, hidden, cache)
+  if (is.null(folders)) return(NULL)
 
   if (length(folders) == 0) {
     tree$empty <- TRUE
@@ -57,12 +46,113 @@ traverseDirs <- function(tree, root, restrictions, hidden) {
     tree$empty <- FALSE
     if (tree$expanded) {
       children <- updateChildren(tree$children, folders)
-      tree$children <- lapply(children, traverseDirs, root = location, restrictions = restrictions, hidden = hidden)
+      tree$children <- lapply(children, function(child) {
+        # Listing a collapsed folder only to learn whether to draw its expand
+        # arrow was most of the cost of the tree on network filesystems, so it
+        # is not done here: the folder is offered as expandable, and
+        # shinyDirChoose() checks it in the background after the response has
+        # gone out (see `dirProber()`). Whatever that has already found is
+        # used. One already marked empty is re-checked, so a folder created in
+        # it still shows up.
+        if (isTRUE(child$expanded) || isTRUE(child$empty)) {
+          traverseDirs(child, root = location, restrictions = restrictions, hidden = hidden, cache = cache)
+        } else {
+          known <- peekCached(cache, folderKey(path(location, child$name)))
+          child$empty <- !is.null(known) && length(known) == 0
+          child$children <- list()
+          child
+        }
+      })
     } else {
       tree$children <- list()
     }
   }
   tree
+}
+
+#' A store of directory listings for one open dialog
+#'
+#' The client sends its whole tree with every click, so without this each click
+#' re-read every expanded folder even though only one branch changed. Listings
+#' are kept until the owner clears the cache, which it does whenever the user
+#' could expect to see changes made outside the dialog: reopening it, the
+#' refresh button, an `updateFreq` tick, or creating a folder.
+#'
+#' A key may map to `NULL` (a folder that no longer exists), so presence is
+#' tracked separately from the value.
+#'
+#' @noRd
+#'
+listingCache <- function() {
+  store <- new.env(parent = emptyenv())
+  list(
+    get = function(key, compute) {
+      if (exists(key, envir = store, inherits = FALSE)) {
+        return(get(key, envir = store, inherits = FALSE))
+      }
+      value <- compute()
+      assign(key, value, envir = store)
+      value
+    },
+    peek = function(key) {
+      if (exists(key, envir = store, inherits = FALSE)) get(key, envir = store, inherits = FALSE)
+    },
+    clear = function() rm(list = ls(store, all.names = TRUE), envir = store)
+  )
+}
+
+#' Look a value up in an optional listing cache
+#'
+#' @noRd
+#'
+cached <- function(cache, key, compute) {
+  if (is.null(cache)) compute() else cache$get(key, compute)
+}
+
+#' A cached value if there is one, without computing it
+#'
+#' Returns `NULL` both when nothing is cached and when the cached value is
+#' `NULL`; callers here treat both as "unknown".
+#'
+#' @noRd
+#'
+peekCached <- function(cache, key) {
+  if (is.null(cache)) NULL else cache$peek(key)
+}
+
+#' Cache key for the folder names inside `location`
+#'
+#' @noRd
+#'
+folderKey <- function(location) paste0("folders:", location)
+
+#' The names of the folders inside `location`, or `NULL` if it does not exist
+#'
+#' @noRd
+#'
+folderNamesIn <- function(location, restrictions, hidden, cache = NULL) {
+  cached(cache, folderKey(location), function() {
+    if (!dir.exists(location)) return(NULL)
+    path_file(listFolders(location, restrictions, hidden))
+  })
+}
+
+#' The folders directly inside a directory
+#'
+#' Candidates come from the entry types the listing itself returns, rather than
+#' a `dir.exists()` on every entry -- on a network filesystem each of those is a
+#' round trip, and most entries are files. Only folders and symlinks are then
+#' checked, the latter to tell a link to a folder from a link to a file.
+#'
+#' @importFrom fs dir_ls
+#'
+#' @noRd
+#'
+listFolders <- function(location, restrictions, hidden) {
+  candidates <- suppressWarnings(
+    dir_ls(location, all = hidden, type = c("directory", "symlink"), fail = FALSE)
+  )
+  dropRestricted(candidates[dir.exists(candidates)], restrictions)
 }
 
 #' Update the children element to reflect current state
@@ -113,27 +203,75 @@ updateChildren <- function(oldChildren, currentChildren) {
 #' returned or not
 #'
 #' @return A function taking a list representation of a folder hierarchy along
-#' with the name of the root where it starts. See [traverseDirs()] for
-#' a description of the format for the list representation.
+#' with the name of the root where it starts, and optionally a listing cache.
+#' See [traverseDirs()] for a description of the format for the list
+#' representation.
 #'
 dirGetter <- function(roots, restrictions, filetypes, hidden=FALSE) {
   if (missing(filetypes)) filetypes <- NULL
   if (missing(restrictions)) restrictions <- NULL
 
-  function(tree, root) {
+  function(tree, root, cache = NULL) {
     currentRoots <- if (inherits(roots, "function")) roots() else roots
 
     if (is.null(names(currentRoots))) stop("Roots must be a named vector or a function returning one")
     if (is.null(root)) root <- names(currentRoots)[1]
 
-    tree <- traverseDirs(tree, currentRoots[root], restrictions, hidden)
+    tree <- traverseDirs(tree, currentRoots[root], restrictions, hidden, cache)
     
     list(
       tree = tree,
       rootNames = I(names(currentRoots)),
-      selectedRoot = root
+      selectedRoot = root,
+      rootPath = unname(currentRoots[root])
     )
   }
+}
+
+#' Find the empty folders in a tree without holding up the response
+#'
+#' Collapsed folders are not listed when the tree is built (see
+#' [traverseDirs()]), so each is drawn with an expand arrow whether or not it
+#' has subfolders. `pending()` names the collapsed folders whose contents are
+#' not known yet, top to bottom as they are drawn, as full paths; `probe()`
+#' lists one of them into the cache and says whether it is empty.
+#'
+#' `pending()` takes the root's path rather than its name: `roots` may be a
+#' function, and an expensive one (it can query the system for mounted
+#' volumes), so the path already resolved for the response is reused instead of
+#' calling it again.
+#'
+#' Takes the same arguments as [dirGetter()], so both can be built from `...`.
+#'
+#' @noRd
+#'
+dirProber <- function(roots, restrictions, filetypes, hidden = FALSE) {
+  if (missing(restrictions)) restrictions <- NULL
+
+  list(
+    pending = function(tree, rootPath, cache) {
+      if (length(rootPath) != 1 || is.na(rootPath)) return(list())
+      found <- list()
+      walk <- function(node, location, segments) {
+        if (!isTRUE(node$expanded)) return()
+        for (child in node$children) {
+          childLocation <- path(location, child$name)
+          childSegments <- c(segments, as.character(child$name))
+          if (isTRUE(child$expanded)) {
+            walk(child, childLocation, childSegments)
+          } else if (!isTRUE(child$empty) && is.null(peekCached(cache, folderKey(childLocation)))) {
+            found[[length(found) + 1]] <<- list(location = childLocation, segments = childSegments)
+          }
+        }
+      }
+      walk(tree, path(rootPath, tree$name), character(0))
+      found
+    },
+    probe = function(location, cache) {
+      folders <- folderNamesIn(location, restrictions, hidden, cache)
+      !is.null(folders) && length(folders) == 0
+    }
+  )
 }
 
 #' Create a function that creates a new directory
@@ -218,21 +356,69 @@ shinyDirChoose <- function(
   dirGet <- do.call(dirGetter, list(...))
   fileGet <- do.call(fileGetter, list(...))
   dirCreate <- do.call(dirCreator, list(...))
+  prober <- do.call(dirProber, list(...))
   currentDir <- list()
   currentFiles <- NULL
   lastDirCreate <- NULL
+  lastRequest <- NULL
+  cache <- listingCache()
+  probeRun <- 0
   clientId <- session$ns(id)
+
+  # Lists the collapsed folders just sent, a slice at a time, and tells the
+  # client which are empty so it can drop their arrows. It runs after the
+  # response has gone out and yields between slices, so the tree shows at once
+  # and clicks are still answered while it works. A newer response supersedes
+  # it; what it found stays cached, so the next run skips those folders.
+  probeEmptyFolders <- function(tree, root, rootPath) {
+    probeRun <<- probeRun + 1
+    run <- probeRun
+    pending <- NULL
+
+    probeSlice <- function() {
+      if (run != probeRun || isTRUE(session$isClosed())) return()
+      # Worked out here rather than up front, so not even the walk over the
+      # tree holds up the response.
+      if (is.null(pending)) pending <<- prober$pending(tree, rootPath, cache)
+      started <- Sys.time()
+      empty <- list()
+      while (length(pending) > 0 && difftime(Sys.time(), started, units = "secs") < 0.02) {
+        folder <- pending[[1]]
+        pending <<- pending[-1]
+        if (prober$probe(folder$location, cache)) empty[[length(empty) + 1]] <- I(folder$segments)
+      }
+      if (length(empty) > 0) {
+        session$sendCustomMessage(
+          "shinyDirectories-empty",
+          list(id = clientId, root = root, paths = empty)
+        )
+      }
+      if (length(pending) > 0) later::later(probeSlice, 0.01)
+    }
+    later::later(probeSlice, 0.01)
+  }
   
   sendDirectoryData <- function(message) {
     req(input[[id]])
     tree <- input[[paste0(id, "-modal")]]
     createDir <- input[[paste0(id, "-newDir")]]
+
+    # The client never resends an unchanged input, so a request identical to
+    # the last one is the refresh button or an updateFreq tick: both mean "look
+    # again". A new click count on the button means the dialog was reopened.
+    # Closing with a selection also changes input[[id]], but to a list, and
+    # nothing needs re-reading for that.
+    request <- list(open = input[[id]], tree = tree)
+    reopened <- !is.list(request$open) && !identical(request$open, lastRequest$open)
+    if (reopened || identical(request, lastRequest)) cache$clear()
+    lastRequest <<- request
     
     # Show a notification if a user is trying to create a 
     # new directory when that option has been disabled 
     if (!identical(createDir, lastDirCreate)) {
       if (allowDirCreate) {
         dirCreate(createDir$name, createDir$path, createDir$root)
+        cache$clear()
         lastDirCreate <<- createDir
       } else {
         shiny::showNotification(shiny::p('Creating directories has been disabled.'), type = 'error')
@@ -277,7 +463,10 @@ shinyDirChoose <- function(
         }
       }
     }
-    newDir <- do.call(dirGet, dir)
+    newDir <- do.call(dirGet, c(dir, list(cache = cache)))
+    # Only the server needs the filesystem path behind the root name.
+    rootPath <- newDir$rootPath
+    newDir$rootPath <- NULL
     if (.is_not(files$dir)) {
       newDir$content <- NA
       newDir$contentPath <- NA
@@ -285,7 +474,11 @@ shinyDirChoose <- function(
     } else {
       newDir$contentPath <- as.list(files$dir)
       files$dir <- paste0(files$dir, collapse = "/")
-      content <- do.call(fileGet, files)
+      # Highlighting a folder lists it for the content pane, and that listing
+      # was re-read on every later click while the folder stayed highlighted.
+      content <- cached(cache, paste0("content:", files$root, ":", files$dir), function() {
+        do.call(fileGet, files)
+      })
       newDir$content <- content$files
       newDir$writable <- content$writable
     }
@@ -293,6 +486,7 @@ shinyDirChoose <- function(
     newDir$root <- files$root
     currentDir <<- newDir
     session$sendCustomMessage(message, list(id = clientId, dir = newDir))
+    probeEmptyFolders(newDir$tree, newDir$selectedRoot, rootPath)
     if (updateFreq > 0) invalidateLater(updateFreq, session)
   }
 

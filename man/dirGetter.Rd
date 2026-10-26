@@ -21,8 +21,9 @@ returned or not}
 }
 \value{
 A function taking a list representation of a folder hierarchy along
-with the name of the root where it starts. See \code{\link[=traverseDirs]{traverseDirs()}} for
-a description of the format for the list representation.
+with the name of the root where it starts, and optionally a listing cache.
+See \code{\link[=traverseDirs]{traverseDirs()}} for a description of the format for the list
+representation.
 }
 \description{
 This functions returns a new function that will handle updating the folder
