@@ -25,6 +25,10 @@ jobs:
 
       - name: Run revdepcheck
         run: |
+          # setup-r points repos at RSPM's Linux *binary* repo; R CMD check
+          # refuses binaries ("Only *source* packages can be checked"), so
+          # revdepcheck must download revdeps from a source mirror.
+          options(repos = c(CRAN = "https://cloud.r-project.org"))
           revdepcheck::revdep_check(num_workers = 4, quiet = FALSE)
         shell: Rscript {0}
 
