@@ -33,7 +33,7 @@ transfer below completes, at which point they resolve.)
 
 * local: Red Hat Enterprise Linux 9.8, R 4.5.2
 * GitHub Actions: ubuntu-latest (R-devel, R-release, R-oldrel-1 to -4),
-  windows-latest (R-release, R 3.6)
+  windows-latest (R-release, R 3.6), macOS-latest (R-release)
 
 ## Reverse dependencies
 
