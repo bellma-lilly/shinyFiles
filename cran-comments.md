@@ -1,1 +1,41 @@
-This is a release fixing the HTML5 change issues
+## Submission
+
+This is an update of shinyFiles from 0.9.3 (published on CRAN) to 0.9.4, and is
+accompanied by a **maintainer change**. Thomas Lin Pedersen
+(thomasp85@gmail.com), the previous maintainer, has agreed in writing to hand
+maintenance of the package to Michael Bell (bell_michael_a@lilly.com). Thomas
+will confirm the transfer separately from his own address to
+CRAN-submissions@R-project.org. Thomas remains an author of the package.
+
+The release ships accumulated feature and fix work since 0.9.3: a "Recent"
+folders group in the volume dropdown, typed-path resolution against the
+configured roots, a loading overlay during directory listings, a substantial
+performance rework of the folder chooser on networked filesystems, reactive
+`...` arguments in `shinyFileSave()`, and a fix for keyboard/backdrop handling
+with multiple shinyFiles dialogs open at once. See NEWS.md for the full list.
+
+No exported function or argument has been removed.
+
+## R CMD check results
+
+0 errors | 0 warnings | 0 notes
+
+## Test environments
+
+* local: Red Hat Enterprise Linux 9.8, R 4.5.2
+* GitHub Actions: ubuntu-latest (R-release), macos-latest (R-release),
+  windows-latest (R-release)
+* win-builder: R-devel, R-release, R-oldrelease
+
+## Reverse dependencies
+
+We checked the 36 reverse dependencies on CRAN (AbSolution, addinsOutline,
+baker, bdDwC, blockr.core, blockr.io, Certara.RsNLME.ModelExecutor, datacleanr,
+dextergui, DQAgui, dqcheckrGUI, dynafluxr, Eagle, GenoTriplo, ggquickeda,
+growthcleanr, handwriterApp, htsr, inDAGO, LFApp, mergenstudio, MLmorph,
+pannotator, phase, pmxcode, quartify, Racmacs, radiant.data, RALSA, retistruct,
+samr, ShinyQuickStarter, soundClass, tall, textAnnotatoR, umiAnalyzer),
+comparing R CMD check results with the CRAN version and with this version.
+
+* We saw 0 new problems.
+* We failed to check 0 packages.
