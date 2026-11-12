@@ -18,7 +18,16 @@ No exported function or argument has been removed.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 2 notes
+
+* New maintainer: expected, this submission is the maintainer-change itself
+  (see above); Thomas Lin Pedersen is confirming separately.
+* "unable to verify current time": the local check host has no outbound
+  time-service access; not expected on CRAN's own check machines.
+
+(`R CMD check --as-cran` also flagged the `shinyFiles/shinyFiles` GitHub URLs
+in DESCRIPTION/man as unreachable; this is expected until the repository
+transfer below completes, at which point they resolve.)
 
 ## Test environments
 
@@ -29,13 +38,13 @@ No exported function or argument has been removed.
 
 ## Reverse dependencies
 
-We checked the 36 reverse dependencies on CRAN (AbSolution, addinsOutline,
+shinyFiles has 36 reverse dependencies on CRAN (AbSolution, addinsOutline,
 baker, bdDwC, blockr.core, blockr.io, Certara.RsNLME.ModelExecutor, datacleanr,
 dextergui, DQAgui, dqcheckrGUI, dynafluxr, Eagle, GenoTriplo, ggquickeda,
 growthcleanr, handwriterApp, htsr, inDAGO, LFApp, mergenstudio, MLmorph,
 pannotator, phase, pmxcode, quartify, Racmacs, radiant.data, RALSA, retistruct,
-samr, ShinyQuickStarter, soundClass, tall, textAnnotatoR, umiAnalyzer),
-comparing R CMD check results with the CRAN version and with this version.
-
-* We saw 0 new problems.
-* We failed to check 0 packages.
+samr, ShinyQuickStarter, soundClass, tall, textAnnotatoR, umiAnalyzer). A full
+revdep check comparing R CMD check results against this version and against
+0.9.3 is in progress and will be reported here before submission; none of the
+changes in 0.9.4 touch exported function signatures or behavior that the
+revdeps are known to rely on.
