@@ -32,9 +32,8 @@ transfer below completes, at which point they resolve.)
 ## Test environments
 
 * local: Red Hat Enterprise Linux 9.8, R 4.5.2
-* GitHub Actions: ubuntu-latest (R-release), macos-latest (R-release),
-  windows-latest (R-release)
-* win-builder: R-devel, R-release, R-oldrelease
+* GitHub Actions: ubuntu-latest (R-devel, R-release, R-oldrel-1 to -4),
+  windows-latest (R-release, R 3.6)
 
 ## Reverse dependencies
 
