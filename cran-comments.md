@@ -37,13 +37,15 @@ transfer below completes, at which point they resolve.)
 
 ## Reverse dependencies
 
-shinyFiles has 36 reverse dependencies on CRAN (AbSolution, addinsOutline,
-baker, bdDwC, blockr.core, blockr.io, Certara.RsNLME.ModelExecutor, datacleanr,
-dextergui, DQAgui, dqcheckrGUI, dynafluxr, Eagle, GenoTriplo, ggquickeda,
-growthcleanr, handwriterApp, htsr, inDAGO, LFApp, mergenstudio, MLmorph,
-pannotator, phase, pmxcode, quartify, Racmacs, radiant.data, RALSA, retistruct,
-samr, ShinyQuickStarter, soundClass, tall, textAnnotatoR, umiAnalyzer). A full
-revdep check comparing R CMD check results against this version and against
-0.9.3 is in progress and will be reported here before submission; none of the
-changes in 0.9.4 touch exported function signatures or behavior that the
-revdeps are known to rely on.
+We checked all 56 reverse dependencies on CRAN (36 that depend on or import
+shinyFiles, plus 20 that suggest it), running R CMD check on each package's
+source against shinyFiles 0.9.3 from CRAN and against 0.9.4.
+
+* We saw 0 new problems.
+* We failed to check 0 packages.
+
+9 packages (AbSolution, aifeducation, blockr.io, DQAgui, dqcheckrGUI, Eagle,
+pmxcode, Racmacs, shinyMixR) have one ERROR that occurs identically with 0.9.3
+and 0.9.4: failing tests or vignettes unrelated to shinyFiles, or compiled
+dependencies (RcppArmadillo, RcppEigen) that were unavailable on the check
+machine.
