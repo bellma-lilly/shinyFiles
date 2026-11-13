@@ -21,8 +21,9 @@ jobs:
           rd <- tools::package_dependencies("shinyFiles", db = db, reverse = TRUE,
                                             which = c("Depends", "Imports", "LinkingTo", "Suggests"))[[1]]
           cat("Found", length(rd), "CRAN revdeps\n")
-          cat("revdeps=", jsonlite::toJSON(sort(rd)), "\n", sep = "",
-              file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
+          stopifnot(length(rd) > 0)
+          json <- paste0("[", paste0('"', sort(rd), '"', collapse = ","), "]")
+          cat("revdeps=", json, "\n", sep = "", file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
         shell: Rscript {0}
 
   check:
@@ -107,6 +108,7 @@ jobs:
       - name: Summarise
         run: |
           f <- list.files("results", "result.csv", recursive = TRUE, full.names = TRUE)
+          if (length(f) == 0) stop("no per-revdep results were produced; see the check jobs")
           r <- do.call(rbind, lapply(f, read.csv))
           old <- r[r$which == "old", ]; new <- r[r$which == "new", ]
           m <- merge(old, new, by = "package", suffixes = c(".old", ".new"), all = TRUE)
