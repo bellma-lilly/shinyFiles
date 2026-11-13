@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">shinyFiles</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.9.3.9000</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.9.4</span>
       </span>
     </div>
 
@@ -29,7 +29,7 @@
   <a href="../news/index.html">Changelog</a>
 </li>
       </ul><ul class="nav navbar-nav navbar-right"><li>
-  <a href="https://github.com/thomasp85/shinyFiles/" class="external-link">
+  <a href="https://github.com/shinyFiles/shinyFiles/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
 
   </a>
@@ -44,25 +44,23 @@
   <div class="col-md-9 contents">
     <div class="page-header">
       <h1 data-toc-skip>Changelog <small></small></h1>
-      <small>Source: <a href="https://github.com/thomasp85/shinyFiles/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/shinyFiles/shinyFiles/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="page-header" data-toc-text="development version" id="shinyfiles-development-version">shinyFiles (development version)<a class="anchor" aria-label="anchor" href="#shinyfiles-development-version"></a></h2>
-<ul><li>Typed paths in the path box (“pencil”) are now resolved against the configured roots on the server, so an absolute path is navigated to rather than appended under the currently selected volume. Previously an absolute path only worked when its root happened to already be selected, and otherwise reported “Folder does not exist”. Paths outside every root do not navigate.</li>
+<h2 class="page-header" data-toc-text="0.9.4" id="shinyfiles-094">shinyFiles 0.9.4<a class="anchor" aria-label="anchor" href="#shinyfiles-094"></a></h2>
+<p>This release passes maintenance of the package to Michael Bell (<a href="mailto:bell_michael_a@lilly.com" class="email">bell_michael_a@lilly.com</a>), with Thomas Lin Pedersen remaining as an author. Thomas has agreed to the change. The release also ships accumulated work (see below) since the 0.9.3 CRAN release.</p>
+<ul><li>Fixed <a href="https://github.com/shinyFiles/shinyFiles/issues/185" class="external-link">#185</a> (<a href="https://github.com/pietrodita" class="external-link">@pietrodita</a>)</li>
+<li>Accepted pull request from <a href="https://github.com/lanceupton" class="external-link">@lanceupton</a> to address <a href="https://github.com/shinyFiles/shinyFiles/issues/181" class="external-link">#181</a></li>
+<li>Typed paths in the path box (“pencil”) are now resolved against the configured roots on the server, so an absolute path is navigated to rather than appended under the currently selected volume. Previously an absolute path only worked when its root happened to already be selected, and otherwise reported “Folder does not exist”. Paths outside every root do not navigate.</li>
 <li>Added a loading overlay while a directory listing is in flight, so slow listings on networked filesystems no longer look like a hang.</li>
 <li>
-<code><a href="../reference/shinyFiles-observers.html">shinyFileSave()</a></code> now defers building its <code>fileGetter</code>/<code>dirCreator</code> until a request comes in, matching <code><a href="../reference/shinyFiles-observers.html">shinyFileChoose()</a></code>, so <code>...</code> arguments (e.g. <code>filetypes</code>) may be reactive expressions (thomasp85/shinyFiles#196, <a href="https://github.com/thomasp85/shinyFiles/issues/195" class="external-link">#195</a>, <a href="https://github.com/WilDoane" class="external-link">@WilDoane</a>).</li>
-<li>Fixed the keydown (Enter/Escape) and backdrop-click handlers losing track of which modal is on top when more than one shinyFiles dialog is open at once, so keyboard shortcuts and backdrop dismissal could act on the wrong dialog (thomasp85/shinyFiles#201, <a href="https://github.com/Tazovsky" class="external-link">@Tazovsky</a>).</li>
+<code><a href="../reference/shinyFiles-observers.html">shinyFileSave()</a></code> now defers building its <code>fileGetter</code>/<code>dirCreator</code> until a request comes in, matching <code><a href="../reference/shinyFiles-observers.html">shinyFileChoose()</a></code>, so <code>...</code> arguments (e.g. <code>filetypes</code>) may be reactive expressions (shinyFiles/shinyFiles#196, <a href="https://github.com/shinyFiles/shinyFiles/issues/195" class="external-link">#195</a>, <a href="https://github.com/WilDoane" class="external-link">@WilDoane</a>).</li>
+<li>Fixed the keydown (Enter/Escape) and backdrop-click handlers losing track of which modal is on top when more than one shinyFiles dialog is open at once, so keyboard shortcuts and backdrop dismissal could act on the wrong dialog (shinyFiles/shinyFiles#201, <a href="https://github.com/Tazovsky" class="external-link">@Tazovsky</a>).</li>
 <li>The volume dropdown now has a “Recent” group listing folders where a selection or save was recently confirmed, so a user can jump straight back to them. The list is kept in the browser’s local storage (per user and browser, shared by every shinyFiles button on the page), and only folders inside the current dialog’s roots are shown. Control the length with the new <code>recent</code> argument to <code><a href="../reference/shinyFiles-observers.html">shinyFileChoose()</a></code>, <code><a href="../reference/shinyFiles-observers.html">shinyDirChoose()</a></code> and <code><a href="../reference/shinyFiles-observers.html">shinyFileSave()</a></code> (default 10, <code>0</code> to disable).</li>
 <li>The folder chooser is much faster on network filesystems. Building the tree no longer lists the inside of every collapsed folder just to decide whether to draw an expand arrow (a folder with no subfolders now loses its arrow when opened), and both the tree and the file listing tell folders from files by the entry type the listing already returned, instead of a separate lookup for each entry. On a home folder with 490 entries, opening the folder chooser went from about 8,300 filesystem lookups to under 600.</li>
 <li>Clicks inside an open folder chooser no longer re-read every expanded folder. Listings are kept for as long as the dialog is open, so a click only reads the folder it touches. They are re-read when the dialog is reopened, on refresh, on each <code>updateFreq</code> tick, and after creating a folder, so changes made outside the dialog show up at those points rather than on every click.</li>
 <li>After the folder chooser draws its tree, the server checks the collapsed folders in the background and the expand arrows disappear from those with no subfolders, without the user having to click them. The check runs in short slices between requests, so it doesn’t hold up the dialog or later clicks, and it stops when a newer response or the end of the session replaces it. This adds <code>later</code> to Imports.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="page-header" data-toc-text="0.9.4" id="shinyfiles-094">shinyFiles 0.9.4<a class="anchor" aria-label="anchor" href="#shinyfiles-094"></a></h2>
-<ul><li>Fixed <a href="https://github.com/thomasp85/shinyFiles/issues/185" class="external-link">#185</a> (<a href="https://github.com/pietrodita" class="external-link">@pietrodita</a>)</li>
-<li>Accepted pull request from <a href="https://github.com/lanceupton" class="external-link">@lanceupton</a> to address <a href="https://github.com/thomasp85/shinyFiles/issues/181" class="external-link">#181</a></li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.9.3" id="shinyfiles-093">shinyFiles 0.9.3<small>2022-08-19</small><a class="anchor" aria-label="anchor" href="#shinyfiles-093"></a></h2>
@@ -78,10 +76,10 @@
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.9.0" id="shinyfiles-090">shinyFiles 0.9.0<small>2020-11-09</small><a class="anchor" aria-label="anchor" href="#shinyfiles-090"></a></h2>
-<ul><li>Security fix that ensures a user cannot bypass folder navigation limits (<a href="https://github.com/lz100" class="external-link">@lz100</a> issue <a href="https://github.com/thomasp85/shinyFiles/issues/152" class="external-link">#152</a>, <a href="https://github.com/bellma-lilly" class="external-link">@bellma-lilly</a> PR <a href="https://github.com/thomasp85/shinyFiles/issues/153" class="external-link">#153</a>)</li>
+<ul><li>Security fix that ensures a user cannot bypass folder navigation limits (<a href="https://github.com/lz100" class="external-link">@lz100</a> issue <a href="https://github.com/shinyFiles/shinyFiles/issues/152" class="external-link">#152</a>, <a href="https://github.com/bellma-lilly" class="external-link">@bellma-lilly</a> PR <a href="https://github.com/shinyFiles/shinyFiles/issues/153" class="external-link">#153</a>)</li>
 <li>Allow additional arguments to be passed to shinyFiles buttons and links (e.g., onclick)</li>
 <li>Fix for creating a new folder using the <code>Create new folder &gt; +</code> button in shinyFileSave (<a href="https://github.com/thomasp85/shinyFiles/issues/142" class="external-link uri">https://github.com/thomasp85/shinyFiles/issues/142</a>)</li>
-<li>Allow directory chooser to disable creating new directories (<a href="https://github.com/dipterix" class="external-link">@dipterix</a> <a href="https://github.com/thomasp85/shinyFiles/issues/144" class="external-link">#144</a>). Extended to allow the same functionality when saving files</li>
+<li>Allow directory chooser to disable creating new directories (<a href="https://github.com/dipterix" class="external-link">@dipterix</a> <a href="https://github.com/shinyFiles/shinyFiles/issues/144" class="external-link">#144</a>). Extended to allow the same functionality when saving files</li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.8.0" id="shinyfiles-080">shinyFiles 0.8.0<small>2020-04-14</small><a class="anchor" aria-label="anchor" href="#shinyfiles-080"></a></h2>
@@ -89,7 +87,7 @@
 </li>
 <li>The default <code>viewtype</code> in the file browser has been changed to “detail”. A new argument <code>viewtype</code> has been added to shinyFilesButton, shinyFilesLink, shinySaveButton, and shinySaveLink that should be one of “detail” (default), “list”, or “icon”</li>
 <li>The default size of the modal has been set to <code>modal-lg</code> to provide a bit more room for file information in the “detail” view. This will, however, automatically adjust to smaller screens as needed</li>
-<li>Allow the user to type a path, including the filename. In filechoose, the file will be selected if it exists. In filesave, if the file does not exist, but the base directory does, the filename will be entered into the dialog. (<a href="https://github.com/bellma-lilly" class="external-link">@bellma-lilly</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/129" class="external-link">#129</a> and <a href="https://github.com/thomasp85/shinyFiles/issues/131" class="external-link">#131</a>)</li>
+<li>Allow the user to type a path, including the filename. In filechoose, the file will be selected if it exists. In filesave, if the file does not exist, but the base directory does, the filename will be entered into the dialog. (<a href="https://github.com/bellma-lilly" class="external-link">@bellma-lilly</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/129" class="external-link">#129</a> and <a href="https://github.com/shinyFiles/shinyFiles/issues/131" class="external-link">#131</a>)</li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.5" id="shinyfiles-075">shinyFiles 0.7.5<small>2019-11-18</small><a class="anchor" aria-label="anchor" href="#shinyfiles-075"></a></h2>
@@ -98,23 +96,23 @@
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.4" id="shinyfiles-074">shinyFiles 0.7.4<a class="anchor" aria-label="anchor" href="#shinyfiles-074"></a></h2>
-<ul><li>Use <code>inherits</code> rather than <code>class(...) == ...</code> (<a href="https://github.com/thomasp85/shinyFiles/issues/123" class="external-link">#123</a>)</li>
+<ul><li>Use <code>inherits</code> rather than <code>class(...) == ...</code> (<a href="https://github.com/shinyFiles/shinyFiles/issues/123" class="external-link">#123</a>)</li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.3" id="shinyfiles-073">shinyFiles 0.7.3<small>2019-04-30</small><a class="anchor" aria-label="anchor" href="#shinyfiles-073"></a></h2>
-<ul><li>Check parent existence when attempting to navigate ‘down’ in directory selection to avoid down-arrow freeze (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/118" class="external-link">#118</a>)</li>
-<li>Return the epoch in milliseconds from the server (<a href="https://github.com/keqiang" class="external-link">@keqiang</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/113" class="external-link">#113</a>)</li>
-<li>Allow launching shinyFiles from within a shiny modal (<a href="https://github.com/ifellows" class="external-link">@ifellows</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/111" class="external-link">#111</a>)</li>
+<ul><li>Check parent existence when attempting to navigate ‘down’ in directory selection to avoid down-arrow freeze (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/118" class="external-link">#118</a>)</li>
+<li>Return the epoch in milliseconds from the server (<a href="https://github.com/keqiang" class="external-link">@keqiang</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/113" class="external-link">#113</a>)</li>
+<li>Allow launching shinyFiles from within a shiny modal (<a href="https://github.com/ifellows" class="external-link">@ifellows</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/111" class="external-link">#111</a>)</li>
 </ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.2" id="shinyfiles-072">shinyFiles 0.7.2<small>2018-11-12</small><a class="anchor" aria-label="anchor" href="#shinyfiles-072"></a></h2>
-<ul><li>Sort files and folders by modification date or creation date in dir chooser (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/105" class="external-link">#105</a>)</li>
-<li>Fix for softlinks / shortcuts used with <code>shinyDirChoose</code> (<a href="https://github.com/raggaraluz" class="external-link">@raggaraluz</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/104" class="external-link">#104</a>)</li>
-<li>Resizing modal (<a href="https://github.com/Unfriendly" class="external-link">@Unfriendly</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/100" class="external-link">#100</a>)</li>
-<li>UI improvement listed below by <a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/97" class="external-link">#97</a>
-<ul><li>Close modal with escape key or by clicking outside the modal, i.e., the equivalent of easyClose for Shiny modals (<a href="https://github.com/thomasp85/shinyFiles/issues/76" class="external-link">#76</a>)</li>
-<li>Open a folder with the enter key (<a href="https://github.com/thomasp85/shinyFiles/issues/63" class="external-link">#63</a>)</li>
-<li>Double click file to select and close modal (<a href="https://github.com/thomasp85/shinyFiles/issues/74" class="external-link">#74</a>)</li>
+<ul><li>Sort files and folders by modification date or creation date in dir chooser (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/105" class="external-link">#105</a>)</li>
+<li>Fix for softlinks / shortcuts used with <code>shinyDirChoose</code> (<a href="https://github.com/raggaraluz" class="external-link">@raggaraluz</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/104" class="external-link">#104</a>)</li>
+<li>Resizing modal (<a href="https://github.com/Unfriendly" class="external-link">@Unfriendly</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/100" class="external-link">#100</a>)</li>
+<li>UI improvement listed below by <a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/97" class="external-link">#97</a>
+<ul><li>Close modal with escape key or by clicking outside the modal, i.e., the equivalent of easyClose for Shiny modals (<a href="https://github.com/shinyFiles/shinyFiles/issues/76" class="external-link">#76</a>)</li>
+<li>Open a folder with the enter key (<a href="https://github.com/shinyFiles/shinyFiles/issues/63" class="external-link">#63</a>)</li>
+<li>Double click file to select and close modal (<a href="https://github.com/shinyFiles/shinyFiles/issues/74" class="external-link">#74</a>)</li>
 <li>Navigate file and folder selection with arrow keys</li>
 <li>Select with the Enter, i.e., a shortcut to click the select button. Enter should open a folder but select a file + close modal</li>
 <li>Save on Enter in textinput for file save modal (i.e., equivalent of clicking the select button)</li>
@@ -125,10 +123,10 @@
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.7.1" id="shinyfiles-071">shinyFiles 0.7.1<small>2018-09-18</small><a class="anchor" aria-label="anchor" href="#shinyfiles-071"></a></h2>
 <ul><li>Close modal on ESC (<a href="https://github.com/vnijs" class="external-link">@vnijs</a>)</li>
-<li>Force file selection on double click (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/95" class="external-link">#95</a>)</li>
+<li>Force file selection on double click (<a href="https://github.com/AFriendlyRobot" class="external-link">@AFriendlyRobot</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/95" class="external-link">#95</a>)</li>
 <li>
-<code>shinyFiles</code> now uses the <a href="https://github.com/r-lib/fs" class="external-link">fs</a> package and works with Chinese, Russian, etc. characters (<a href="https://github.com/vnijs" class="external-link">@vnijs</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/92" class="external-link">#92</a>)</li>
-<li>Use select file type icons from Rstudio with permission (<a href="https://github.com/vnijs" class="external-link">@vnijs</a>, <a href="https://github.com/thomasp85/shinyFiles/issues/86" class="external-link">#86</a>)</li>
+<code>shinyFiles</code> now uses the <a href="https://github.com/r-lib/fs" class="external-link">fs</a> package and works with Chinese, Russian, etc. characters (<a href="https://github.com/vnijs" class="external-link">@vnijs</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/92" class="external-link">#92</a>)</li>
+<li>Use select file type icons from Rstudio with permission (<a href="https://github.com/vnijs" class="external-link">@vnijs</a>, <a href="https://github.com/shinyFiles/shinyFiles/issues/86" class="external-link">#86</a>)</li>
 </ul></div>
   </div>
 
@@ -140,7 +138,7 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by Thomas Lin Pedersen, Vincent Nijs, Thomas Schaffner, Eric Nantz.</p>
+  <p></p><p>Developed by Thomas Lin Pedersen, Vincent Nijs, Thomas Schaffner, Eric Nantz, Michael Bell.</p>
 </div>
 
 <div class="pkgdown">
